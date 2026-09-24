@@ -1,0 +1,32 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env / secrets (로컬 sync 스크립트, Supabase, Anthropic 키)
+.env
+.env*.local
+
+# sync 파이프라인 생성물 (샘플 CSV는 추적, 결과물은 무시)
+/data/projects.json
+/public/shots/
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

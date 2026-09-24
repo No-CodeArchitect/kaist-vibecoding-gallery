@@ -1,0 +1,247 @@
+import Link from "next/link";
+import SiteHeader from "@/components/site/SiteHeader";
+import SiteFooter from "@/components/site/SiteFooter";
+import { firstImage } from "@/lib/media";
+import { getVideos } from "@/lib/videos";
+
+// media/videos 파일을 넣으면 바로 반영되도록 요청 시 렌더.
+export const dynamic = "force-dynamic";
+
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+      <span className="text-xs font-bold uppercase tracking-[0.2em] text-gold">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+// 플레이스홀더 이미지 자리 (이후 public/media/... 실물로 교체)
+function ImgPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="flex aspect-video w-full items-center justify-center rounded-xl bg-white/[0.05] ring-1 ring-white/10">
+      <span className="text-xs font-medium text-white/35">{label}</span>
+    </div>
+  );
+}
+
+export default function HomePage() {
+  // public/media/hero/hero-1.(jpg|png|…) 를 넣으면 자동으로 히어로 배경이 된다.
+  const heroImg = firstImage(["media/hero/hero-1", "media/hero/hero"]);
+  const videos = getVideos();
+  const aboutImg = firstImage(["media/about/about-1", "media/about/about"]);
+
+  return (
+    <div className="min-h-screen bg-night text-white">
+      <SiteHeader />
+
+      {/* 히어로 */}
+      <section className="relative overflow-hidden">
+        {heroImg ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={heroImg}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-night via-night/85 to-night/40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-night to-transparent" />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-b from-coal via-night to-night" />
+            {/* 은은한 골드 글로우 — 완전 블랙 느낌 완화 */}
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage:
+                  "radial-gradient(60% 55% at 15% 20%, rgba(217,164,65,0.16), transparent 60%), radial-gradient(45% 45% at 90% 10%, rgba(217,164,65,0.08), transparent 60%)",
+              }}
+            />
+            <div
+              className="absolute inset-0 opacity-[0.12]"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.35) 1px, transparent 0)",
+                backgroundSize: "28px 28px",
+              }}
+            />
+          </>
+        )}
+        <div className="relative mx-auto flex min-h-[78vh] max-w-6xl flex-col justify-center px-4 py-24 sm:px-6">
+          <Eyebrow>국방 AI 인재양성 · 바이브코딩</Eyebrow>
+          <h1 className="mt-5 max-w-3xl text-4xl font-black leading-tight tracking-tight sm:text-6xl">
+            군 특화 AI,
+            <br />
+            <span className="text-gold">코드로 증명하다</span>
+          </h1>
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
+            지난 3년, 약 200명의 교육생이 바이브코딩으로 자신만의 결과물을
+            만들었습니다. 그 기록과 이번 기수의 포트폴리오를 한곳에서
+            만나보세요.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link
+              href="/portfolio"
+              className="rounded-full bg-gold px-6 py-3 text-sm font-bold text-night transition hover:bg-gold-soft"
+            >
+              포트폴리오 보기 →
+            </Link>
+            <Link
+              href="/about"
+              className="rounded-full border border-white/25 px-6 py-3 text-sm font-bold text-white transition hover:border-gold hover:text-gold"
+            >
+              과정 소개
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 숫자 밴드 */}
+      <section className="border-y border-white/10 bg-night-soft">
+        <div className="mx-auto grid max-w-6xl grid-cols-3 divide-x divide-white/10 px-4 sm:px-6">
+          {[
+            { n: "3개년", l: "누적 교육" },
+            { n: "200+", l: "수료 교육생" },
+            { n: "3", l: "운영 트랙 (리더십·정책·프로젝트)" },
+          ].map((s) => (
+            <div key={s.l} className="px-2 py-8 text-center sm:py-10">
+              <div className="text-3xl font-black text-gold sm:text-4xl">
+                {s.n}
+              </div>
+              <div className="mt-1 text-xs text-white/50 sm:text-sm">{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 과정 소개 티저 */}
+      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
+          <div>
+            <Eyebrow>About</Eyebrow>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
+              배우는 것을 넘어,
+              <br />
+              직접 만드는 교육
+            </h2>
+            <p className="mt-5 leading-relaxed text-white/60">
+              군 특화 AI 보수교육은 이론에 그치지 않습니다. 교육생 각자가
+              바이브코딩으로 실무에 쓸 수 있는 결과물을 완성하고, 마지막 날
+              동료 앞에서 발표합니다. 이 사이트는 그 과정과 성과의 아카이브입니다.
+            </p>
+            <Link
+              href="/about"
+              className="mt-6 inline-block text-sm font-bold text-gold hover:text-gold-soft"
+            >
+              과정 자세히 보기 →
+            </Link>
+          </div>
+          {aboutImg ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={aboutImg}
+              alt="과정 대표 이미지"
+              className="aspect-video w-full rounded-xl object-cover ring-1 ring-white/10"
+            />
+          ) : (
+            <ImgPlaceholder label="과정 대표 이미지 자리 (public/media/about)" />
+          )}
+        </div>
+      </section>
+
+      {/* 포트폴리오 티저 */}
+      <section className="border-t border-white/10 bg-night-soft">
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+          <div className="flex items-end justify-between">
+            <div>
+              <Eyebrow>Portfolio</Eyebrow>
+              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
+                이번 기수 결과물
+              </h2>
+            </div>
+            <Link
+              href="/portfolio"
+              className="hidden text-sm font-bold text-gold hover:text-gold-soft sm:inline"
+            >
+              전체 보기 →
+            </Link>
+          </div>
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
+            {["결과물 미리보기", "결과물 미리보기", "결과물 미리보기"].map(
+              (l, i) => (
+                <div
+                  key={i}
+                  className="overflow-hidden rounded-xl bg-coal ring-1 ring-white/10"
+                >
+                  <ImgPlaceholder label={l} />
+                  <div className="p-4">
+                    <div className="h-3 w-2/3 rounded bg-white/10" />
+                    <div className="mt-2 h-3 w-1/3 rounded bg-white/5" />
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+          <Link
+            href="/portfolio"
+            className="mt-8 inline-block rounded-full bg-gold px-6 py-3 text-sm font-bold text-night transition hover:bg-gold-soft sm:hidden"
+          >
+            전체 보기 →
+          </Link>
+        </div>
+      </section>
+
+      {/* 미디어 티저 */}
+      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <div className="flex items-end justify-between">
+          <div>
+            <Eyebrow>Media</Eyebrow>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
+              교육 현장 스케치
+            </h2>
+          </div>
+          <Link
+            href="/media"
+            className="hidden text-sm font-bold text-gold hover:text-gold-soft sm:inline"
+          >
+            전체 보기 →
+          </Link>
+        </div>
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
+          {videos.length > 0
+            ? videos.slice(0, 2).map((v) => (
+                <div
+                  key={v.youtubeId}
+                  className="overflow-hidden rounded-xl ring-1 ring-white/10"
+                >
+                  <iframe
+                    className="aspect-video w-full"
+                    src={`https://www.youtube.com/embed/${v.youtubeId}`}
+                    title={v.title}
+                    loading="lazy"
+                    allowFullScreen
+                  />
+                </div>
+              ))
+            : ["교육 하이라이트 영상 자리", "발표 현장 영상 자리"].map((l, i) => (
+                <div
+                  key={i}
+                  className="relative overflow-hidden rounded-xl ring-1 ring-white/10"
+                >
+                  <ImgPlaceholder label={l} />
+                  <div className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gold/90 text-night">
+                    ▶
+                  </div>
+                </div>
+              ))}
+        </div>
+      </section>
+
+      <SiteFooter />
+    </div>
+  );
+}

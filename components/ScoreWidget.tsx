@@ -1,0 +1,116 @@
+"use client";
+
+import Link from "next/link";
+import { useActionState } from "react";
+import { submitScore, type ScoreState } from "@/lib/score-actions";
+import StarRating from "./StarRating";
+
+const initialState: ScoreState = { ok: false, error: null };
+
+export default function ScoreWidget({
+  projectId,
+  isLoggedIn,
+  isMine,
+  isScoringOpen,
+  existing,
+}: {
+  projectId: string;
+  isLoggedIn: boolean;
+  isMine: boolean;
+  isScoringOpen: boolean;
+  existing: { completeness: number; creativity: number } | null;
+}) {
+  const [state, formAction, pending] = useActionState(
+    submitScore,
+    initialState
+  );
+
+  if (!isLoggedIn) {
+    return (
+      <div className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
+        <h3 className="text-sm font-bold text-white">채점</h3>
+        <p className="mt-2 text-sm text-white/50">
+          로그인한 교육생만 채점할 수 있습니다.
+        </p>
+        <Link
+          href="/login"
+          className="mt-4 block rounded-lg bg-gold px-4 py-2.5 text-center text-sm font-bold text-night transition hover:bg-gold-soft"
+        >
+          로그인하고 채점하기
+        </Link>
+      </div>
+    );
+  }
+
+  if (isMine) {
+    return (
+      <div className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
+        <h3 className="text-sm font-bold text-white">채점</h3>
+        <p className="mt-2 rounded-lg bg-white/5 px-3 py-3 text-sm text-white/50">
+          본인 작품은 채점할 수 없습니다. 다른 교육생의 프로젝트를 채점해 주세요.
+        </p>
+      </div>
+    );
+  }
+
+  const alreadyScored = !!existing;
+
+  return (
+    <div className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-bold text-white">채점</h3>
+        {alreadyScored && (
+          <span className="inline-flex items-center rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+            채점완료
+          </span>
+        )}
+      </div>
+
+      {!isScoringOpen ? (
+        <p className="rounded-lg bg-white/5 px-3 py-3 text-sm text-white/50">
+          채점이 마감되었습니다.
+        </p>
+      ) : (
+        <form action={formAction} className="flex flex-col gap-4">
+          <input type="hidden" name="projectId" value={projectId} />
+          <StarRating
+            name="completeness"
+            label="완성도 / 작동성"
+            defaultValue={existing?.completeness ?? 0}
+          />
+          <StarRating
+            name="creativity"
+            label="창의성 / 아이디어"
+            defaultValue={existing?.creativity ?? 0}
+          />
+
+          {state.error && (
+            <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">
+              {state.error}
+            </p>
+          )}
+          {state.ok && (
+            <p className="rounded-lg bg-emerald-500/15 px-3 py-2 text-sm text-emerald-300">
+              채점이 저장되었습니다. 결과와 순위는 마감 후 공개됩니다.
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded-lg bg-gold px-4 py-2.5 text-sm font-bold text-night transition hover:bg-gold-soft disabled:opacity-60"
+          >
+            {pending
+              ? "저장 중…"
+              : alreadyScored
+                ? "채점 수정"
+                : "채점 제출"}
+          </button>
+          <p className="text-center text-xs text-white/40">
+            점수는 마감 전까지 언제든 수정할 수 있어요.
+          </p>
+        </form>
+      )}
+    </div>
+  );
+}
