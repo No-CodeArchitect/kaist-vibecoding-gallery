@@ -85,7 +85,7 @@ export default function HomePage() {
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link
-              href="/portfolio"
+              href="/sections"
               className="rounded-full bg-gold px-6 py-3 text-sm font-bold text-night transition hover:bg-gold-soft"
             >
               포트폴리오 보기 →
@@ -164,7 +164,7 @@ export default function HomePage() {
               </h2>
             </div>
             <Link
-              href="/portfolio"
+              href="/sections"
               className="hidden text-sm font-bold text-gold hover:text-gold-soft sm:inline"
             >
               전체 보기 →
@@ -187,7 +187,7 @@ export default function HomePage() {
             )}
           </div>
           <Link
-            href="/portfolio"
+            href="/sections"
             className="mt-8 inline-block rounded-full bg-gold px-6 py-3 text-sm font-bold text-night transition hover:bg-gold-soft sm:hidden"
           >
             전체 보기 →

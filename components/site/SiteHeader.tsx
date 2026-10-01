@@ -4,7 +4,7 @@ const NAV = [
   { href: "/", label: "홈" },
   { href: "/about", label: "과정 소개" },
   { href: "/archive", label: "아카이브" },
-  { href: "/portfolio", label: "포트폴리오" },
+  { href: "/sections", label: "포트폴리오" },
   { href: "/media", label: "미디어" },
 ];
 

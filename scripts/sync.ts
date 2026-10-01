@@ -55,6 +55,7 @@ async function main() {
 
     const record: StoredProject = {
       id,
+      cohortId: "c1", // 현재 기본 섹션. (섹션별 sync는 후속 작업)
       authorId: input.authorId,
       authorName: input.authorName,
       title: input.title,

@@ -28,6 +28,11 @@ export async function postComment(
     return { ok: false, error: "프로젝트를 찾을 수 없습니다." };
   }
 
+  // 다른 섹션 프로젝트엔 댓글 불가 (섹션 간 분리)
+  if (project.cohortId !== student.cohortId) {
+    return { ok: false, error: "이 섹션의 교육생만 댓글을 남길 수 있습니다." };
+  }
+
   const body = String(formData.get("body") ?? "").trim();
   if (body.length === 0) {
     return { ok: false, error: "댓글 내용을 입력해 주세요." };

@@ -107,9 +107,14 @@ export async function scoredProjectIds(
   return ids;
 }
 
-export async function distinctRaterCount(): Promise<number> {
+// 특정 섹션(프로젝트 집합)에서 채점에 참여한 서로 다른 학생 수.
+export async function distinctRaterCountFor(
+  projectIds: Set<string>
+): Promise<number> {
   const rows = await allScoreRows();
-  return new Set(rows.map((r) => r.studentId)).size;
+  const set = new Set<string>();
+  for (const r of rows) if (projectIds.has(r.projectId)) set.add(r.studentId);
+  return set.size;
 }
 
 // 집계(평균/인원)를 프로젝트별 Map으로.

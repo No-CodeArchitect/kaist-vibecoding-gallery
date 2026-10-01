@@ -63,18 +63,23 @@ export async function listComments(projectId: string): Promise<Comment[]> {
     );
 }
 
-export async function listAllComments(): Promise<Comment[]> {
+export async function listAllComments(
+  projectIds?: Set<string>
+): Promise<Comment[]> {
   const sb = getSupabase();
+  let all: Comment[];
   if (sb) {
     const { data } = await sb
       .from("comments")
       .select("*")
       .order("created_at", { ascending: false });
-    return (data ?? []).map(fromRow);
+    all = (data ?? []).map(fromRow);
+  } else {
+    all = [...mem].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
-  return [...mem].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  return projectIds ? all.filter((c) => projectIds.has(c.projectId)) : all;
 }
 
 export async function addComment(

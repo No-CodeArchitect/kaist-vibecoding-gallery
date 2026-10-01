@@ -10,6 +10,7 @@ export const COHORT_NAME = "AI 보수교육 1차";
 export const dummyProjects: Project[] = [
   {
     id: "p1",
+    cohortId: "c1",
     title: "부대 당직근무 자동 편성기",
     tagline: "엑셀 지옥 탈출, 클릭 한 번으로 공평한 당직표",
     authorId: "s1",
@@ -36,6 +37,7 @@ export const dummyProjects: Project[] = [
   },
   {
     id: "p2",
+    cohortId: "c1",
     title: "군수품 재고 스캔 도우미",
     tagline: "바코드 찍으면 끝나는 재물조사",
     authorId: "s2",
@@ -62,6 +64,7 @@ export const dummyProjects: Project[] = [
   },
   {
     id: "p3",
+    cohortId: "c1",
     title: "정신전력 교육 퀴즈봇",
     tagline: "지루한 정훈 시간을 게임처럼",
     authorId: "s3",
@@ -88,6 +91,7 @@ export const dummyProjects: Project[] = [
   },
   {
     id: "p4",
+    cohortId: "c1",
     title: "체력검정 기록 관리 대시보드",
     tagline: "3km, 팔굽혀펴기, 윗몸일으키기 한눈에",
     authorId: "s4",
@@ -114,6 +118,7 @@ export const dummyProjects: Project[] = [
   },
   {
     id: "p5",
+    cohortId: "c1",
     title: "간부 일일결산 요약 AI",
     tagline: "긴 상황보고를 세 줄로",
     authorId: "s5",
@@ -140,6 +145,7 @@ export const dummyProjects: Project[] = [
   },
   {
     id: "p6",
+    cohortId: "c1",
     title: "외출·외박 신청 간소화 폼",
     tagline: "종이 없이, 승인까지 한 흐름에",
     authorId: "s6",

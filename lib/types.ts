@@ -14,6 +14,7 @@ export interface AiReview {
 
 export interface Project {
   id: string;
+  cohortId: string; // 소속 섹션(기수) — 섹션 간 분리
   title: string;
   tagline: string;
   authorId: string; // 제작자(교육생) id — 본인 작품 판정용

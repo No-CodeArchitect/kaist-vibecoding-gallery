@@ -22,7 +22,7 @@ export default function SiteFooter() {
           <Link href="/archive" className="hover:text-gold">
             아카이브
           </Link>
-          <Link href="/portfolio" className="hover:text-gold">
+          <Link href="/sections" className="hover:text-gold">
             포트폴리오
           </Link>
           <Link href="/media" className="hover:text-gold">

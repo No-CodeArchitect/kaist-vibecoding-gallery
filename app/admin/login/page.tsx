@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import AdminLoginForm from "@/components/AdminLoginForm";
-import { COHORT_NAME } from "@/lib/dummy-data";
 import { isAdmin } from "@/lib/admin-session";
 
 export default async function AdminLoginPage() {
@@ -11,7 +10,7 @@ export default async function AdminLoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <span className="inline-block rounded-md bg-gold/15 px-2 py-0.5 text-xs font-bold text-gold">
-            {COHORT_NAME} · 관리자
+            관리자 콘솔
           </span>
           <h1 className="mt-3 text-2xl font-black tracking-tight text-white">
             관리자 콘솔

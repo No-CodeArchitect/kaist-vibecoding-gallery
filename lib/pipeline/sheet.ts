@@ -5,7 +5,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { csvToRecords } from "./csv";
-import { findStudentByName } from "../roster";
+import { findStudentByNameInCohort } from "../students-store";
+
+// 현재 sync는 기본 섹션(c1)의 명단에 매칭한다. (섹션별 sync는 후속 작업)
+const SYNC_COHORT = "c1";
 
 export interface ProjectInput {
   authorId: string;
@@ -29,9 +32,11 @@ function pick(rec: Record<string, string>, keys: string[]): string {
   return "";
 }
 
-function toInput(rec: Record<string, string>): ProjectInput | null {
+async function toInput(
+  rec: Record<string, string>
+): Promise<ProjectInput | null> {
   const name = pick(rec, ["이름", "제작자", "name"]);
-  const student = findStudentByName(name);
+  const student = await findStudentByNameInCohort(SYNC_COHORT, name);
   if (!student) {
     console.warn(`  ⚠️  명단에 없는 이름, 건너뜀: "${name}"`);
     return null;
@@ -75,7 +80,6 @@ export async function loadProjectInputs(): Promise<ProjectInput[]> {
   }
 
   const records = csvToRecords(text);
-  return records
-    .map(toInput)
-    .filter((x): x is ProjectInput => x !== null);
+  const resolved = await Promise.all(records.map(toInput));
+  return resolved.filter((x): x is ProjectInput => x !== null);
 }

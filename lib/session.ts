@@ -5,7 +5,7 @@
 import "server-only";
 import crypto from "crypto";
 import { cookies } from "next/headers";
-import { findStudentById, type Student } from "./students";
+import { findStudentById, type Student } from "./students-store";
 
 export const SESSION_COOKIE = "vg_session";
 
@@ -63,5 +63,5 @@ export async function getSession(): Promise<Student | null> {
   const raw = cookieStore.get(SESSION_COOKIE)?.value;
   const studentId = verify(raw);
   if (!studentId) return null;
-  return findStudentById(studentId) ?? null;
+  return (await findStudentById(studentId)) ?? null;
 }

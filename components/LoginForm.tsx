@@ -7,13 +7,19 @@ const initialState: LoginState = { error: null };
 
 export default function LoginForm({
   students,
+  cohortId,
+  slug,
 }: {
   students: { id: string; name: string }[];
+  cohortId: string;
+  slug: string;
 }) {
   const [state, formAction, pending] = useActionState(login, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <input type="hidden" name="cohortId" value={cohortId} />
+      <input type="hidden" name="slug" value={slug} />
       <div className="flex flex-col gap-1.5">
         <label htmlFor="studentId" className="text-sm font-semibold text-white">
           이름

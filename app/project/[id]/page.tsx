@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import ScoreWidget from "@/components/ScoreWidget";
 import CommentList from "@/components/CommentList";
 import CommentForm from "@/components/CommentForm";
-import { COHORT_NAME } from "@/lib/dummy-data";
-import { getProjectById } from "@/lib/projects-data";
+import { getProjectById, getProjects } from "@/lib/projects-data";
 import { getSession } from "@/lib/session";
 import { getScore } from "@/lib/scores-store";
 import { listComments } from "@/lib/comments-store";
-import { getSettings } from "@/lib/settings-store";
+import { getCohortById } from "@/lib/cohorts-store";
 import { rankProjects } from "@/lib/ranking";
-import { getProjects } from "@/lib/projects-data";
+
+export const dynamic = "force-dynamic";
 
 function Stars({ value }: { value: number }) {
   return (
@@ -38,23 +38,30 @@ export default async function ProjectDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const student = await getSession(); // 비로그인 열람 허용
+  const session = await getSession();
   const { id } = await params;
   const project = getProjectById(id);
   if (!project) notFound();
 
+  const cohort = await getCohortById(project.cohortId);
+  const slug = cohort?.slug ?? "";
+  const rankRevealed = cohort?.rankRevealed ?? false;
+  const scoringOpen = cohort?.scoringOpen ?? false;
+
+  // 같은 섹션 소속 학생만 채점/댓글 (섹션 간 분리)
+  const student =
+    session && cohort && session.cohortId === cohort.id ? session : null;
+
   const isMine = student ? project.authorId === student.id : false;
   const existing = student ? await getScore(project.id, student.id) : null;
   const comments = await listComments(project.id);
-  const settings = await getSettings();
   const failed =
     project.status === "capture_failed" || !project.signatureImageUrl;
 
-  // 순위 공개 시: 이 프로젝트의 순위/평점 (한 번의 순위 계산에서 추출)
   let rank: number | null = null;
   let agg: { avg: number | null; count: number } = { avg: null, count: 0 };
-  if (settings.rankRevealed) {
-    const entry = (await rankProjects(getProjects())).find(
+  if (rankRevealed) {
+    const entry = (await rankProjects(getProjects(project.cohortId))).find(
       (p) => p.id === project.id
     );
     rank = entry?.rank ?? null;
@@ -63,29 +70,27 @@ export default async function ProjectDetailPage({
 
   return (
     <main className="min-h-screen bg-night text-white">
-      {/* 상단 바 */}
       <div className="border-b border-white/10 bg-night-soft">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
           <Link
-            href="/portfolio"
+            href={slug ? `/g/${slug}` : "/"}
             className="text-sm font-semibold text-white/50 hover:text-gold"
           >
             ← 갤러리로
           </Link>
           <span className="rounded-md bg-gold/15 px-2 py-0.5 text-xs font-bold text-gold">
-            {COHORT_NAME}
+            {cohort?.name ?? ""}
           </span>
         </div>
       </div>
 
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_320px]">
-        {/* 본문 */}
         <div className="flex flex-col gap-6">
           <Hero title={project.title} failed={failed} />
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              {settings.rankRevealed && rank !== null && (
+              {rankRevealed && rank !== null && (
                 <span className="inline-flex items-center rounded-full bg-gold/20 px-2.5 py-0.5 text-sm font-bold text-gold">
                   {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : ""}{" "}
                   {rank}위
@@ -100,7 +105,7 @@ export default async function ProjectDetailPage({
                 </span>
               )}
             </div>
-            {settings.rankRevealed && (
+            {rankRevealed && (
               <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-gold/15 px-3 py-1.5 text-sm">
                 <span className="font-bold text-gold">
                   교육생 평점 {agg.avg !== null ? agg.avg.toFixed(2) : "-"} / 5
@@ -124,7 +129,6 @@ export default async function ProjectDetailPage({
             </div>
           </div>
 
-          {/* AI 요약 */}
           <section className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
             <h2 className="text-sm font-bold text-white">AI 요약</h2>
             <p className="mt-2 text-sm leading-relaxed text-white/60">
@@ -145,7 +149,6 @@ export default async function ProjectDetailPage({
             </ul>
           </section>
 
-          {/* AI 심사평 (순위 미반영) */}
           <section className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-white">AI 심사평</h2>
@@ -166,7 +169,6 @@ export default async function ProjectDetailPage({
             </p>
           </section>
 
-          {/* 댓글 */}
           <section className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
             <div className="mb-4 flex items-center gap-2">
               <h2 className="text-sm font-bold text-white">댓글</h2>
@@ -179,7 +181,7 @@ export default async function ProjectDetailPage({
                 <CommentForm projectId={project.id} isAuthor={isMine} />
               ) : (
                 <Link
-                  href="/login"
+                  href={slug ? `/g/${slug}/login` : "/"}
                   className="block rounded-xl border border-white/15 bg-coal-soft px-4 py-3 text-center text-sm font-semibold text-gold transition hover:bg-white/5"
                 >
                   로그인 후 댓글을 남길 수 있어요
@@ -190,13 +192,12 @@ export default async function ProjectDetailPage({
           </section>
         </div>
 
-        {/* 사이드: 채점 위젯 (sticky) */}
         <aside className="lg:sticky lg:top-8 lg:self-start">
           <ScoreWidget
             projectId={project.id}
             isLoggedIn={!!student}
             isMine={isMine}
-            isScoringOpen={settings.scoringOpen}
+            isScoringOpen={scoringOpen}
             existing={
               existing
                 ? {

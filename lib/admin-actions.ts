@@ -8,7 +8,12 @@ import {
   destroyAdminSession,
   isAdmin,
 } from "./admin-session";
-import { setScoringOpen, setRankRevealed } from "./settings-store";
+import {
+  createCohort,
+  setCohortScoringOpen,
+  setCohortRankRevealed,
+} from "./cohorts-store";
+import { addStudents, removeStudent } from "./students-store";
 import { setCommentHidden } from "./comments-store";
 
 export interface AdminLoginState {
@@ -36,29 +41,58 @@ async function requireAdmin(): Promise<void> {
   if (!(await isAdmin())) throw new Error("관리자 권한이 필요합니다.");
 }
 
-function revalidateAll() {
+function refresh() {
   revalidatePath("/admin");
-  revalidatePath("/");
-  revalidatePath("/present");
+  revalidatePath("/", "layout");
+}
+
+// --- 섹션(기수) ---
+export async function createCohortAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const name = String(formData.get("name") ?? "").trim();
+  const slug = String(formData.get("slug") ?? "").trim();
+  if (!name) return;
+  await createCohort(name, slug || undefined);
+  refresh();
 }
 
 export async function toggleScoringOpen(formData: FormData): Promise<void> {
   await requireAdmin();
-  await setScoringOpen(String(formData.get("value")) === "true");
-  revalidateAll();
+  const cohortId = String(formData.get("cohortId") ?? "");
+  await setCohortScoringOpen(cohortId, String(formData.get("value")) === "true");
+  refresh();
 }
 
 export async function toggleRankRevealed(formData: FormData): Promise<void> {
   await requireAdmin();
-  await setRankRevealed(String(formData.get("value")) === "true");
-  revalidateAll();
+  const cohortId = String(formData.get("cohortId") ?? "");
+  await setCohortRankRevealed(cohortId, String(formData.get("value")) === "true");
+  refresh();
 }
 
+// --- 명단/코드 ---
+export async function addStudentsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const cohortId = String(formData.get("cohortId") ?? "");
+  const raw = String(formData.get("names") ?? "");
+  // 줄바꿈/쉼표로 여러 명 한 번에
+  const names = raw.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+  if (cohortId && names.length) await addStudents(cohortId, names);
+  refresh();
+}
+
+export async function removeStudentAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (id) await removeStudent(id);
+  refresh();
+}
+
+// --- 댓글 모더레이션 ---
 export async function moderateComment(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const hidden = String(formData.get("hidden")) === "true";
   await setCommentHidden(id, hidden);
-  revalidatePath("/admin");
-  revalidatePath("/");
+  refresh();
 }
