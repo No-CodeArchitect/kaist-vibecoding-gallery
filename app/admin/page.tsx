@@ -17,6 +17,8 @@ import { getProjects } from "@/lib/projects-data";
 import { rankProjects } from "@/lib/ranking";
 import { distinctRaterCountFor } from "@/lib/scores-store";
 import { listAllComments } from "@/lib/comments-store";
+import { listMedia } from "@/lib/media-items";
+import MediaManager from "@/components/MediaManager";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,9 @@ export default async function AdminDashboard() {
   const host = h.get("host") ?? "";
   const proto = host.startsWith("localhost") ? "http" : "https";
   const origin = host ? `${proto}://${host}` : "";
+
+  const aboutItems = await listMedia("about");
+  const sketchItems = await listMedia("sketch");
 
   const cohorts = await listCohorts();
   const sections = await Promise.all(
@@ -64,6 +69,21 @@ export default async function AdminDashboard() {
       </header>
 
       <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8 sm:px-6">
+        {/* 사이트 미디어 (홈 영상) — 드래그&드롭 */}
+        <MediaManager
+          slot="about"
+          title="홈 · 과정 소개 대표 영상"
+          description="홈 화면 '배우는 것을 넘어, 직접 만드는 교육' 옆에 표시되는 영상입니다. 새로 올리면 기존 영상을 대체합니다."
+          items={aboutItems}
+          fallbackNote="지정한 영상이 없어 기본 영상(군 특화 AI 교육과정)이 표시 중입니다."
+        />
+        <MediaManager
+          slot="sketch"
+          title="홈 · 미디어 · 교육 현장 스케치"
+          description="홈의 '교육 현장 스케치'(최신 2개)와 미디어 페이지(전체)에 표시됩니다. 최신순으로 정렬됩니다."
+          items={sketchItems}
+        />
+
         {/* 새 섹션 추가 */}
         <section className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
           <h2 className="mb-1 text-sm font-bold text-white">새 섹션(기수) 추가</h2>

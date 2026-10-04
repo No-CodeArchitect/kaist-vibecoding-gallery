@@ -1,10 +1,11 @@
 import Link from "next/link";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
+import MediaEmbed from "@/components/site/MediaEmbed";
 import { firstImage } from "@/lib/media";
-import { getVideos } from "@/lib/videos";
+import { getAboutMedia, listMedia } from "@/lib/media-items";
 
-// media/videos 파일을 넣으면 바로 반영되도록 요청 시 렌더.
+// 관리자가 올린 미디어가 바로 반영되도록 요청 시 렌더.
 export const dynamic = "force-dynamic";
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -27,11 +28,11 @@ function ImgPlaceholder({ label }: { label: string }) {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
   // public/media/hero/hero-1.(jpg|png|…) 를 넣으면 자동으로 히어로 배경이 된다.
   const heroImg = firstImage(["media/hero/hero-1", "media/hero/hero"]);
-  const videos = getVideos();
-  const aboutImg = firstImage(["media/about/about-1", "media/about/about"]);
+  const aboutMedia = await getAboutMedia(); // 과정 소개 대표 영상 (관리자에서 변경 가능)
+  const sketch = await listMedia("sketch"); // 교육 현장 스케치 (관리자 드래그&드롭)
 
   return (
     <div className="min-h-screen bg-night text-white">
@@ -140,16 +141,10 @@ export default function HomePage() {
               과정 자세히 보기 →
             </Link>
           </div>
-          {aboutImg ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={aboutImg}
-              alt="과정 대표 이미지"
-              className="aspect-video w-full rounded-xl object-cover ring-1 ring-white/10"
-            />
-          ) : (
-            <ImgPlaceholder label="과정 대표 이미지 자리 (public/media/about)" />
-          )}
+          <MediaEmbed
+            item={aboutMedia}
+            className="rounded-xl ring-1 ring-white/10"
+          />
         </div>
       </section>
 
@@ -212,19 +207,13 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
-          {videos.length > 0
-            ? videos.slice(0, 2).map((v) => (
+          {sketch.length > 0
+            ? sketch.slice(0, 2).map((m) => (
                 <div
-                  key={v.youtubeId}
+                  key={m.id}
                   className="overflow-hidden rounded-xl ring-1 ring-white/10"
                 >
-                  <iframe
-                    className="aspect-video w-full"
-                    src={`https://www.youtube.com/embed/${v.youtubeId}`}
-                    title={v.title}
-                    loading="lazy"
-                    allowFullScreen
-                  />
+                  <MediaEmbed item={m} />
                 </div>
               ))
             : ["교육 하이라이트 영상 자리", "발표 현장 영상 자리"].map((l, i) => (

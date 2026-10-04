@@ -1,6 +1,7 @@
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
-import { getVideos } from "@/lib/videos";
+import MediaEmbed from "@/components/site/MediaEmbed";
+import { listMedia } from "@/lib/media-items";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,8 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function MediaPage() {
-  const videos = getVideos();
+export default async function MediaPage() {
+  const items = await listMedia("sketch");
 
   return (
     <div className="min-h-screen bg-night text-white">
@@ -29,28 +30,22 @@ export default function MediaPage() {
             영상 · 미디어
           </h1>
           <p className="mt-5 max-w-2xl leading-relaxed text-white/60">
-            교육 하이라이트와 발표 현장 영상을 모았습니다.
+            교육 하이라이트와 현장 스케치를 모았습니다.
           </p>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        {videos.length > 0 ? (
+        {items.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {videos.map((v) => (
+            {items.map((m) => (
               <div
-                key={v.youtubeId}
+                key={m.id}
                 className="overflow-hidden rounded-xl bg-coal ring-1 ring-white/10"
               >
-                <iframe
-                  className="aspect-video w-full"
-                  src={`https://www.youtube.com/embed/${v.youtubeId}`}
-                  title={v.title}
-                  loading="lazy"
-                  allowFullScreen
-                />
+                <MediaEmbed item={m} />
                 <div className="p-4 text-sm font-semibold text-white">
-                  {v.title}
+                  {m.title}
                 </div>
               </div>
             ))}
