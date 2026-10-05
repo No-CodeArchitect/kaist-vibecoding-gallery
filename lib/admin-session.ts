@@ -41,7 +41,8 @@ function verify(signed: string | undefined): boolean {
 }
 
 export function checkAdminPassword(input: string): boolean {
-  return input === adminPassword();
+  // 붙여넣기에 딸려오는 앞뒤 공백/줄바꿈은 무시한다.
+  return input.trim() === adminPassword().trim();
 }
 
 export async function createAdminSession(): Promise<void> {
