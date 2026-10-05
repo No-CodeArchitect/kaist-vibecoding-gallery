@@ -6,8 +6,10 @@ import {
   checkAdminPassword,
   createAdminSession,
   destroyAdminSession,
+  getAdminEmail,
   isAdmin,
 } from "./admin-session";
+import { addAdminEmail, removeAdminEmail, normalizeEmail } from "./admin-allowlist";
 import {
   createCohort,
   setCohortScoringOpen,
@@ -28,7 +30,7 @@ export async function adminLogin(
   if (!checkAdminPassword(password)) {
     return { error: "관리자 비밀번호가 올바르지 않습니다." };
   }
-  await createAdminSession();
+  await createAdminSession("password"); // SSO 설정 전의 임시 로그인
   redirect("/admin");
 }
 
@@ -85,6 +87,25 @@ export async function removeStudentAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (id) await removeStudent(id);
+  refresh();
+}
+
+// --- 관리자 계정 (구글 이메일 허용 목록) ---
+export async function addAdminAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const email = String(formData.get("email") ?? "");
+  const by = (await getAdminEmail()) ?? "password";
+  await addAdminEmail(email, by);
+  refresh();
+}
+
+export async function removeAdminAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
+  // 본인 계정은 삭제 불가 (스스로 잠기는 사고 방지)
+  const me = await getAdminEmail();
+  if (!email || email === me) return;
+  await removeAdminEmail(email);
   refresh();
 }
 

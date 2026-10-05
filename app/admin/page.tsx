@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { isAdmin } from "@/lib/admin-session";
+import { getAdminEmail, isAdmin } from "@/lib/admin-session";
+import { listManagedAdmins, ownerEmails } from "@/lib/admin-allowlist";
+import { ssoEnabled } from "@/lib/google-oauth";
 import {
+  addAdminAction,
+  removeAdminAction,
   adminLogout,
   createCohortAction,
   toggleScoringOpen,
@@ -33,6 +37,11 @@ export default async function AdminDashboard() {
   const aboutItems = await listMedia("about");
   const sketchItems = await listMedia("sketch");
 
+  const me = await getAdminEmail();
+  const owners = ownerEmails();
+  const managedAdmins = await listManagedAdmins();
+  const sso = ssoEnabled();
+
   const cohorts = await listCohorts();
   const sections = await Promise.all(
     cohorts.map(async (c) => {
@@ -56,6 +65,11 @@ export default async function AdminDashboard() {
             관리자 콘솔
           </span>
           <div className="flex items-center gap-3">
+            {me && (
+              <span data-testid="admin-me" className="hidden text-xs text-white/50 sm:inline">
+                {me}
+              </span>
+            )}
             <Link href="/" className="text-sm font-semibold text-white/50 hover:text-gold">
               홈
             </Link>
@@ -69,6 +83,69 @@ export default async function AdminDashboard() {
       </header>
 
       <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8 sm:px-6">
+        {/* 관리자 계정 (구글 이메일 허용 목록) */}
+        <section className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-bold text-white">관리자 계정</h2>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                sso ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
+              }`}
+            >
+              {sso ? "구글 로그인 사용 중" : "구글 로그인 미설정 (임시 비밀번호 로그인)"}
+            </span>
+          </div>
+          <p className="mb-4 mt-1 text-xs text-white/50">
+            여기에 등록한 구글 계정만 관리자로 로그인할 수 있습니다. 도메인은 제한하지
+            않으며, 어떤 구글 계정이든 이메일을 등록하면 됩니다.
+          </p>
+
+          <ul className="divide-y divide-white/10 rounded-lg ring-1 ring-white/10">
+            {owners.map((e) => (
+              <li key={e} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <span className="flex-1 text-white">{e}</span>
+                <span className="rounded bg-gold/15 px-2 py-0.5 text-xs font-semibold text-gold">
+                  소유자 (환경변수)
+                </span>
+              </li>
+            ))}
+            {managedAdmins.map((a) => (
+              <li key={a.email} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <span className="flex-1 text-white">{a.email}</span>
+                {a.email === me ? (
+                  <span className="text-xs text-white/40">현재 로그인</span>
+                ) : (
+                  <form action={removeAdminAction}>
+                    <input type="hidden" name="email" value={a.email} />
+                    <button className="rounded px-2 py-0.5 text-xs text-white/40 hover:text-red-400">
+                      삭제
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+            {owners.length === 0 && managedAdmins.length === 0 && (
+              <li className="px-3 py-3 text-xs text-white/40">
+                등록된 관리자가 없습니다. 환경변수 ADMIN_EMAILS에 첫 관리자 이메일을
+                설정하세요.
+              </li>
+            )}
+          </ul>
+
+          <form action={addAdminAction} className="mt-3 flex gap-2">
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder="추가할 관리자 구글 이메일 (예: name@gmail.com)"
+              className="flex-1 rounded-lg border border-white/15 bg-coal-soft px-3 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-gold focus:ring-2 focus:ring-gold/20"
+            />
+            <button className="rounded-lg bg-gold px-4 py-2 text-sm font-bold text-night transition hover:bg-gold-soft">
+              관리자 추가
+            </button>
+          </form>
+        </section>
+
         {/* 사이트 미디어 (홈 영상) — 드래그&드롭 */}
         <MediaManager
           slot="about"
