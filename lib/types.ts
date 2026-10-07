@@ -27,6 +27,14 @@ export interface Project {
   status: ProjectStatus;
   publishedAt: string; // ISO. NEW 뱃지 기준
   aiReview: AiReview;
+  // 교육생이 작품등록 때 쓴 설명 (상세 페이지 표시용, 더미에는 없음)
+  details?: {
+    problem: string;
+    militaryUseCase: string;
+    techStack: string;
+    notes: string;
+    highlights: string;
+  };
 
   // --- 로그인 사용자 관점의 파생 상태 (1단계에서는 더미 값) ---
   isNew: boolean; // 내가 아직 안 본 새 카드

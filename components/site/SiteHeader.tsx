@@ -6,6 +6,7 @@ const NAV = [
   { href: "/archive", label: "아카이브" },
   { href: "/sections", label: "포트폴리오" },
   { href: "/media", label: "미디어" },
+  { href: "/apply", label: "교육 신청" },
 ];
 
 export default function SiteHeader() {

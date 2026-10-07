@@ -21,13 +21,36 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-function Hero({ title, failed }: { title: string; failed: boolean }) {
+function Hero({
+  title,
+  failed,
+  imageUrl,
+  liveUrl,
+}: {
+  title: string;
+  failed: boolean;
+  imageUrl: string | null;
+  liveUrl: string;
+}) {
+  if (!failed && imageUrl) {
+    return (
+      <a
+        href={liveUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block overflow-hidden rounded-2xl ring-1 ring-white/10 transition hover:ring-gold/50"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imageUrl} alt={`${title} 썸네일`} className="aspect-[16/10] w-full object-cover" />
+      </a>
+    );
+  }
   const initial = title.trim().charAt(0);
   return (
     <div className="flex aspect-[16/8] w-full items-center justify-center rounded-2xl bg-white/[0.05] ring-1 ring-white/10">
       <span className="text-6xl font-black text-white/25">{initial}</span>
       {failed && (
-        <span className="sr-only">스크린샷 캡처 실패 · 플레이스홀더</span>
+        <span className="sr-only">썸네일 없음 · 플레이스홀더</span>
       )}
     </div>
   );
@@ -40,7 +63,7 @@ export default async function ProjectDetailPage({
 }) {
   const session = await getSession();
   const { id } = await params;
-  const project = getProjectById(id);
+  const project = await getProjectById(id);
   if (!project) notFound();
 
   const cohort = await getCohortById(project.cohortId);
@@ -61,7 +84,7 @@ export default async function ProjectDetailPage({
   let rank: number | null = null;
   let agg: { avg: number | null; count: number } = { avg: null, count: 0 };
   if (rankRevealed) {
-    const entry = (await rankProjects(getProjects(project.cohortId))).find(
+    const entry = (await rankProjects(await getProjects(project.cohortId))).find(
       (p) => p.id === project.id
     );
     rank = entry?.rank ?? null;
@@ -86,7 +109,12 @@ export default async function ProjectDetailPage({
 
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-6">
-          <Hero title={project.title} failed={failed} />
+          <Hero
+            title={project.title}
+            failed={failed}
+            imageUrl={project.signatureImageUrl}
+            liveUrl={project.liveUrl}
+          />
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -147,7 +175,51 @@ export default async function ProjectDetailPage({
                 </li>
               ))}
             </ul>
+            {project.details?.highlights && (
+              <p className="mt-4 text-sm text-white/50">
+                <span className="font-semibold text-white/70">하이라이트 · </span>
+                {project.details.highlights}
+              </p>
+            )}
           </section>
+
+          {project.details && (
+            <section className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
+              <h2 className="text-sm font-bold text-white">제작자 설명</h2>
+              <dl className="mt-3 flex flex-col gap-4 text-sm">
+                {(
+                  [
+                    ["해결하려는 문제", project.details.problem],
+                    ["군 활용 시나리오", project.details.militaryUseCase],
+                    ["사용한 도구·기술", project.details.techStack],
+                    ["제작 후기", project.details.notes],
+                  ] as const
+                )
+                  .filter(([, v]) => v)
+                  .map(([k, v]) => (
+                    <div key={k}>
+                      <dt className="text-xs font-bold uppercase tracking-wide text-white/40">{k}</dt>
+                      <dd className="mt-1 whitespace-pre-line leading-relaxed text-white/70">{v}</dd>
+                    </div>
+                  ))}
+                {project.repoUrl && (
+                  <div>
+                    <dt className="text-xs font-bold uppercase tracking-wide text-white/40">소스코드</dt>
+                    <dd className="mt-1">
+                      <a
+                        href={project.repoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="break-all text-gold hover:text-gold-soft"
+                      >
+                        {project.repoUrl}
+                      </a>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </section>
+          )}
 
           <section className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
             <div className="flex items-center justify-between">

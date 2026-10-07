@@ -28,6 +28,9 @@ export default function SiteFooter() {
           <Link href="/media" className="hover:text-gold">
             미디어
           </Link>
+          <Link href="/apply" className="hover:text-gold">
+            교육 신청
+          </Link>
           <Link href="/admin" className="hover:text-gold">
             관리자
           </Link>

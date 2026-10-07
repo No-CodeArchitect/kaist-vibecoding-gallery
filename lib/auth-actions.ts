@@ -17,6 +17,7 @@ export async function login(
   const slug = String(formData.get("slug") ?? "");
   const studentId = String(formData.get("studentId") ?? "");
   const code = String(formData.get("code") ?? "");
+  const next = String(formData.get("next") ?? "");
 
   if (!cohortId) return { error: "섹션 정보가 없습니다." };
   if (!studentId) return { error: "이름을 선택해 주세요." };
@@ -27,6 +28,8 @@ export async function login(
   }
 
   await createSession(student.id);
+  // next는 정해진 값만 허용 (임의 주소로의 리다이렉트 방지)
+  if (slug && next === "submit") redirect(`/g/${slug}/submit`);
   redirect(slug ? `/g/${slug}` : "/");
 }
 

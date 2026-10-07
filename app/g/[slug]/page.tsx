@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProjectCard from "@/components/ProjectCard";
-import { getProjects } from "@/lib/projects-data";
+import { getProjects, getRecordByAuthor } from "@/lib/projects-data";
+import EduBanner from "@/components/site/EduBanner";
 import { getSession } from "@/lib/session";
 import { logout } from "@/lib/auth-actions";
 import { scoredProjectIds } from "@/lib/scores-store";
@@ -27,9 +28,10 @@ export default async function SectionGalleryPage({
     ? await scoredProjectIds(student.id)
     : new Set<string>();
 
-  const base = cohort.rankRevealed
-    ? await rankProjects(getProjects(cohort.id))
-    : getProjects(cohort.id);
+  const all = await getProjects(cohort.id);
+  const base = cohort.rankRevealed ? await rankProjects(all) : all;
+  const myRecord = student ? await getRecordByAuthor(student.id) : null;
+  const canSubmit = cohort.scoringOpen && !cohort.rankRevealed;
 
   const viewProjects = base.map((p) => {
     const isMine = student ? p.authorId === student.id : false;
@@ -109,6 +111,12 @@ export default async function SectionGalleryPage({
                     </span>
                     <span className="text-white/40"> 님</span>
                   </span>
+                  <Link
+                    href={`/g/${slug}/submit`}
+                    className="rounded-lg border border-gold/60 px-3 py-1.5 text-xs font-bold text-gold transition hover:bg-gold hover:text-night"
+                  >
+                    {myRecord ? "내 작품" : "작품 등록"}
+                  </Link>
                   <form action={logout}>
                     <button className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/70 transition hover:bg-white/10">
                       로그아웃
@@ -138,11 +146,36 @@ export default async function SectionGalleryPage({
         </div>
       </div>
 
+      {/* 내 작품 등록 상태 */}
+      {student && (!myRecord || !myRecord.ai || myRecord.needsAnalysis) && (
+        <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gold/10 px-4 py-3 ring-1 ring-gold/30">
+            <p className="text-sm text-white/80">
+              {!myRecord
+                ? canSubmit
+                  ? "아직 내 작품을 등록하지 않았습니다. 썸네일과 배포 주소·설명을 남기면 AI가 카드로 만들어 줍니다."
+                  : "작품 등록이 마감되었습니다."
+                : !myRecord.ai
+                  ? "내 작품이 접수되었습니다. 관리자가 분석을 실행하면 갤러리에 공개됩니다."
+                  : "제목·소개·썸네일은 바로 바뀌고, AI 요약은 다음 분석 때 새로 만들어집니다."}
+            </p>
+            {(myRecord || canSubmit) && (
+              <Link
+                href={`/g/${slug}/submit`}
+                className="rounded-full bg-gold px-4 py-1.5 text-xs font-bold text-night transition hover:bg-gold-soft"
+              >
+                {myRecord ? "내 작품 보기·수정" : "작품 등록하기 →"}
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         {projects.length === 0 ? (
           <p className="rounded-2xl bg-coal px-6 py-16 text-center text-sm text-white/40 ring-1 ring-white/10">
-            아직 등록된 프로젝트가 없습니다. (sync로 결과물이 생성되면 여기에
-            표시됩니다)
+            아직 공개된 작품이 없습니다. 교육생이 작품을 등록하고 관리자가 분석을
+            실행하면 여기에 카드로 표시됩니다.
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -152,6 +185,10 @@ export default async function SectionGalleryPage({
           </div>
         )}
       </section>
+
+      <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6">
+        <EduBanner compact />
+      </div>
     </main>
   );
 }

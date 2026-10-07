@@ -27,7 +27,7 @@ export async function submitScore(
   }
 
   const projectId = String(formData.get("projectId") ?? "");
-  const project = getProjectById(projectId);
+  const project = await getProjectById(projectId);
   if (!project) {
     return { ok: false, error: "프로젝트를 찾을 수 없습니다." };
   }

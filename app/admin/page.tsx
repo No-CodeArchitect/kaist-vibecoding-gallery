@@ -17,7 +17,11 @@ import {
 } from "@/lib/admin-actions";
 import { listCohorts } from "@/lib/cohorts-store";
 import { listStudents } from "@/lib/students-store";
-import { getProjects } from "@/lib/projects-data";
+import { getProjects, listRecords } from "@/lib/projects-data";
+import { hasApiKey } from "@/lib/pipeline/ai";
+import SubmissionsPanel, { type SubmissionRow } from "@/components/SubmissionsPanel";
+import { listEduRequests, type EduRequestStatus } from "@/lib/edu-requests-store";
+import { setEduRequestStatusAction, deleteEduRequestAction } from "@/lib/edu-request-actions";
 import { rankProjects } from "@/lib/ranking";
 import { distinctRaterCountFor } from "@/lib/scores-store";
 import { listAllComments } from "@/lib/comments-store";
@@ -42,18 +46,38 @@ export default async function AdminDashboard() {
   const managedAdmins = await listManagedAdmins();
   const sso = ssoEnabled();
 
+  const eduRequests = await listEduRequests();
+  const newRequests = eduRequests.filter((r) => r.status === "new").length;
+  const apiReady = hasApiKey();
+
   const cohorts = await listCohorts();
   const sections = await Promise.all(
     cohorts.map(async (c) => {
       const students = await listStudents(c.id);
-      const projects = getProjects(c.id);
+      const projects = await getProjects(c.id);
+      const records = await listRecords(c.id);
+      const submitted = new Set(records.map((r) => r.authorId));
+      const missing = students.filter((s) => !submitted.has(s.id)).map((s) => s.name);
+      const rows: SubmissionRow[] = records.map((r) => ({
+        id: r.id,
+        title: r.submission.title,
+        authorName: r.authorName,
+        liveUrl: r.submission.liveUrl,
+        status: r.status,
+        needsAnalysis: r.needsAnalysis,
+        published: !!r.ai,
+        mock: !!r.ai?.mock,
+        thumbUrl: r.thumbUrl,
+        error: r.error,
+        updatedAt: r.updatedAt,
+      }));
       const pids = new Set(projects.map((p) => p.id));
       const ranked = (await rankProjects(projects)).sort(
         (a, b) => (a.rank ?? 99) - (b.rank ?? 99)
       );
       const raters = await distinctRaterCountFor(pids);
       const comments = await listAllComments(pids);
-      return { c, students, projects, ranked, raters, comments };
+      return { c, students, projects, ranked, raters, comments, rows, missing };
     })
   );
 
@@ -146,6 +170,82 @@ export default async function AdminDashboard() {
           </form>
         </section>
 
+        {/* 부대 AI 교육 신청 */}
+        <section className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-bold text-white">부대 AI 교육 신청</h2>
+            {newRequests > 0 && (
+              <span className="rounded-full bg-gold px-2 py-0.5 text-xs font-black text-night">
+                신규 {newRequests}
+              </span>
+            )}
+            <Link href="/apply" className="ml-auto text-xs font-semibold text-gold hover:underline">
+              신청 페이지 →
+            </Link>
+          </div>
+          <p className="mb-3 mt-1 text-xs text-white/50">
+            홈·갤러리 배너의 「교육 신청하기」로 들어온 신청입니다. 연락처 등 개인정보가 있으니
+            상담이 끝나면 삭제하세요.
+          </p>
+          {eduRequests.length === 0 ? (
+            <p className="rounded-lg px-3 py-3 text-xs text-white/40 ring-1 ring-white/10">
+              아직 접수된 신청이 없습니다.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {eduRequests.map((r) => (
+                <li
+                  key={r.id}
+                  className={`rounded-lg border px-3 py-3 text-sm ${
+                    r.status === "new" ? "border-gold/40 bg-gold/5" : "border-white/10"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-white">{r.unit}</span>
+                    <span className="text-white/60">{r.contactName}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${EDU_STATUS[r.status].tone}`}>
+                      {EDU_STATUS[r.status].label}
+                    </span>
+                    <span className="ml-auto text-xs text-white/40">
+                      {new Date(r.createdAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/60">
+                    <span>☎ {r.phone}</span>
+                    {r.email && <span>✉ {r.email}</span>}
+                    {r.headcount && <span>인원 {r.headcount}</span>}
+                    {r.period && <span>시기 {r.period}</span>}
+                  </div>
+                  {r.message && (
+                    <p className="mt-2 whitespace-pre-line rounded bg-night px-3 py-2 text-xs leading-relaxed text-white/70">
+                      {r.message}
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {(Object.keys(EDU_STATUS) as EduRequestStatus[])
+                      .filter((st) => st !== r.status)
+                      .map((st) => (
+                        <form key={st} action={setEduRequestStatusAction}>
+                          <input type="hidden" name="id" value={r.id} />
+                          <input type="hidden" name="status" value={st} />
+                          <button className="rounded bg-white/10 px-2 py-0.5 text-xs text-white/70 hover:bg-white/20">
+                            → {EDU_STATUS[st].label}
+                          </button>
+                        </form>
+                      ))}
+                    <form action={deleteEduRequestAction} className="ml-auto">
+                      <input type="hidden" name="id" value={r.id} />
+                      <button className="rounded px-2 py-0.5 text-xs text-white/40 hover:text-red-400">
+                        삭제
+                      </button>
+                    </form>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         {/* 사이트 미디어 (홈 영상) — 드래그&드롭 */}
         <MediaManager
           slot="about"
@@ -186,7 +286,7 @@ export default async function AdminDashboard() {
         </section>
 
         {/* 섹션별 관리 */}
-        {sections.map(({ c, students, projects, ranked, raters, comments }) => (
+        {sections.map(({ c, students, projects, ranked, raters, comments, rows, missing }) => (
           <section key={c.id} className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
             {/* 헤더 + 링크 */}
             <div className="flex flex-wrap items-center gap-2">
@@ -304,6 +404,16 @@ export default async function AdminDashboard() {
               )}
             </div>
 
+            {/* 작품 등록 · AI 분석 */}
+            <div className="mt-5">
+              <SubmissionsPanel
+                rows={rows}
+                missing={missing}
+                rosterCount={students.length}
+                apiReady={apiReady}
+              />
+            </div>
+
             {/* 순위 미리보기 */}
             {ranked.length > 0 && (
               <div className="mt-5">
@@ -387,6 +497,12 @@ export default async function AdminDashboard() {
     </main>
   );
 }
+
+const EDU_STATUS: Record<EduRequestStatus, { label: string; tone: string }> = {
+  new: { label: "신규", tone: "bg-gold/20 text-gold" },
+  contacted: { label: "연락함", tone: "bg-sky-500/20 text-sky-300" },
+  done: { label: "완료", tone: "bg-white/10 text-white/60" },
+};
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

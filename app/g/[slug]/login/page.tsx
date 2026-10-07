@@ -9,16 +9,20 @@ export const dynamic = "force-dynamic";
 
 export default async function SectionLoginPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ next?: string }>;
 }) {
   const { slug } = await params;
+  const next = (await searchParams).next === "submit" ? "submit" : undefined;
   const cohort = await getCohortBySlug(slug);
   if (!cohort) notFound();
 
   // 이미 이 섹션에 로그인돼 있으면 갤러리로.
   const session = await getSession();
-  if (session && session.cohortId === cohort.id) redirect(`/g/${slug}`);
+  if (session && session.cohortId === cohort.id)
+    redirect(next ? `/g/${slug}/submit` : `/g/${slug}`);
 
   const students = await getStudentsPublic(cohort.id);
 
@@ -46,7 +50,7 @@ export default async function SectionLoginPage({
               아직 등록된 명단이 없습니다. 관리자에게 문의하세요.
             </p>
           ) : (
-            <LoginForm students={students} cohortId={cohort.id} slug={slug} />
+            <LoginForm students={students} cohortId={cohort.id} slug={slug} next={next} />
           )}
         </div>
 

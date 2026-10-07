@@ -4,6 +4,9 @@ import SiteFooter from "@/components/site/SiteFooter";
 import MediaEmbed from "@/components/site/MediaEmbed";
 import { firstImage } from "@/lib/media";
 import { getAboutMedia, listMedia } from "@/lib/media-items";
+import { getProjects } from "@/lib/projects-data";
+import ProjectCard from "@/components/ProjectCard";
+import EduBanner from "@/components/site/EduBanner";
 
 // 관리자가 올린 미디어가 바로 반영되도록 요청 시 렌더.
 export const dynamic = "force-dynamic";
@@ -33,6 +36,11 @@ export default async function HomePage() {
   const heroImg = firstImage(["media/hero/hero-1", "media/hero/hero"]);
   const aboutMedia = await getAboutMedia(); // 과정 소개 대표 영상 (관리자에서 변경 가능)
   const sketch = await listMedia("sketch"); // 교육 현장 스케치 (관리자 드래그&드롭)
+  // 최근 공개된 작품 3개 (전체 섹션). 순위·채점 정보는 홈에서 노출하지 않는다.
+  const recent = (await getProjects())
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
+    .slice(0, 3)
+    .map((p) => ({ ...p, isNew: false, rank: null, avgScore: null }));
 
   return (
     <div className="min-h-screen bg-night text-white">
@@ -166,7 +174,9 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {["결과물 미리보기", "결과물 미리보기", "결과물 미리보기"].map(
+            {recent.length > 0
+              ? recent.map((p) => <ProjectCard key={p.id} project={p} />)
+              : ["결과물 미리보기", "결과물 미리보기", "결과물 미리보기"].map(
               (l, i) => (
                 <div
                   key={i}
@@ -188,6 +198,11 @@ export default async function HomePage() {
             전체 보기 →
           </Link>
         </div>
+      </section>
+
+      {/* 부대 교육 신청 배너 */}
+      <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6">
+        <EduBanner />
       </section>
 
       {/* 미디어 티저 */}
