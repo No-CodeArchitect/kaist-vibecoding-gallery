@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import SubmitProjectForm from "@/components/SubmitProjectForm";
 import { getCohortBySlug } from "@/lib/cohorts-store";
-import { getSession } from "@/lib/session";
+import { getStudent } from "@/lib/session";
 import { getRecordByAuthor } from "@/lib/projects-data";
 
 export const dynamic = "force-dynamic";
@@ -34,8 +34,7 @@ export default async function SubmitPage({
   const cohort = await getCohortBySlug(slug);
   if (!cohort) notFound();
 
-  const session = await getSession();
-  const student = session && session.cohortId === cohort.id ? session : null;
+  const student = await getStudent(cohort.id);
   const record = student ? await getRecordByAuthor(student.id) : null;
   const locked = !cohort.scoringOpen || cohort.rankRevealed;
 
@@ -64,12 +63,14 @@ export default async function SubmitPage({
 
         {!student ? (
           <div className="mt-8 rounded-2xl bg-coal p-6 text-center ring-1 ring-white/10">
-            <p className="text-sm text-white/60">작품을 등록하려면 먼저 로그인하세요.</p>
+            <p className="text-sm text-white/60">
+              작품을 등록하려면 이 섹션에 가입·수락된 계정으로 로그인하세요.
+            </p>
             <Link
-              href={`/g/${slug}/login?next=submit`}
+              href={`/g/${slug}/join?next=submit`}
               className="mt-4 inline-block rounded-full bg-gold px-5 py-2 text-sm font-bold text-night hover:bg-gold-soft"
             >
-              이름 + 코드로 로그인
+              로그인 / 가입 신청
             </Link>
           </div>
         ) : (
@@ -100,6 +101,7 @@ export default async function SubmitPage({
                 제작자: <span className="font-semibold text-white/80">{student.name}</span>
               </p>
               <SubmitProjectForm
+                cohortId={cohort.id}
                 initial={record?.submission ?? null}
                 initialThumbUrl={record?.thumbUrl ?? null}
                 locked={locked}

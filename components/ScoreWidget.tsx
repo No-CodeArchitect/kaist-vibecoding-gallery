@@ -13,8 +13,10 @@ export default function ScoreWidget({
   isMine,
   isScoringOpen,
   existing,
+  loginHref,
 }: {
   projectId: string;
+  loginHref: string;
   isLoggedIn: boolean;
   isMine: boolean;
   isScoringOpen: boolean;
@@ -30,10 +32,10 @@ export default function ScoreWidget({
       <div className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
         <h3 className="text-sm font-bold text-white">채점</h3>
         <p className="mt-2 text-sm text-white/50">
-          로그인한 교육생만 채점할 수 있습니다.
+          이 섹션에 가입·수락된 교육생만 채점할 수 있습니다.
         </p>
         <Link
-          href="/login"
+          href={loginHref}
           className="mt-4 block rounded-lg bg-gold px-4 py-2.5 text-center text-sm font-bold text-night transition hover:bg-gold-soft"
         >
           로그인하고 채점하기

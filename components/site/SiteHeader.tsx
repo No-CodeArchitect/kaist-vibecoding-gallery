@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getMember } from "@/lib/member-session";
 
 const NAV = [
   { href: "/", label: "홈" },
@@ -9,7 +10,8 @@ const NAV = [
   { href: "/apply", label: "교육 신청" },
 ];
 
-export default function SiteHeader() {
+export default async function SiteHeader() {
+  const member = await getMember();
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-night/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
@@ -33,10 +35,10 @@ export default function SiteHeader() {
         </nav>
 
         <Link
-          href="/login"
-          className="rounded-full border border-gold/60 px-4 py-1.5 text-xs font-bold text-gold transition hover:bg-gold hover:text-night"
+          href="/me"
+          className="max-w-[9rem] truncate rounded-full border border-gold/60 px-4 py-1.5 text-xs font-bold text-gold transition hover:bg-gold hover:text-night"
         >
-          로그인
+          {member ? "내 계정" : "로그인"}
         </Link>
       </div>
     </header>

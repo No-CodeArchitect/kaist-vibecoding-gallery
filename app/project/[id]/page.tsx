@@ -4,7 +4,7 @@ import ScoreWidget from "@/components/ScoreWidget";
 import CommentList from "@/components/CommentList";
 import CommentForm from "@/components/CommentForm";
 import { getProjectById, getProjects } from "@/lib/projects-data";
-import { getSession } from "@/lib/session";
+import { getStudent } from "@/lib/session";
 import { getScore } from "@/lib/scores-store";
 import { listComments } from "@/lib/comments-store";
 import { getCohortById } from "@/lib/cohorts-store";
@@ -61,7 +61,6 @@ export default async function ProjectDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await getSession();
   const { id } = await params;
   const project = await getProjectById(id);
   if (!project) notFound();
@@ -71,9 +70,8 @@ export default async function ProjectDetailPage({
   const rankRevealed = cohort?.rankRevealed ?? false;
   const scoringOpen = cohort?.scoringOpen ?? false;
 
-  // 같은 섹션 소속 학생만 채점/댓글 (섹션 간 분리)
-  const student =
-    session && cohort && session.cohortId === cohort.id ? session : null;
+  // 이 섹션에서 수락된 교육생만 채점/댓글 (섹션 간 분리)
+  const student = cohort ? await getStudent(cohort.id) : null;
 
   const isMine = student ? project.authorId === student.id : false;
   const existing = student ? await getScore(project.id, student.id) : null;
@@ -253,10 +251,10 @@ export default async function ProjectDetailPage({
                 <CommentForm projectId={project.id} isAuthor={isMine} />
               ) : (
                 <Link
-                  href={slug ? `/g/${slug}/login` : "/"}
+                  href={slug ? `/g/${slug}/join` : "/"}
                   className="block rounded-xl border border-white/15 bg-coal-soft px-4 py-3 text-center text-sm font-semibold text-gold transition hover:bg-white/5"
                 >
-                  로그인 후 댓글을 남길 수 있어요
+                  이 섹션 교육생으로 로그인하면 댓글을 남길 수 있어요
                 </Link>
               )}
             </div>
@@ -268,6 +266,7 @@ export default async function ProjectDetailPage({
           <ScoreWidget
             projectId={project.id}
             isLoggedIn={!!student}
+            loginHref={slug ? `/g/${slug}/join` : "/me"}
             isMine={isMine}
             isScoringOpen={scoringOpen}
             existing={

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSession } from "./session";
+import { getStudent } from "./session";
 import { getCohortById } from "./cohorts-store";
 import { isAdmin } from "./admin-session";
 import {
@@ -43,11 +43,10 @@ export async function submitProjectAction(
   _prev: SubmitState,
   formData: FormData
 ): Promise<SubmitState> {
-  const student = await getSession();
-  if (!student) return { ok: false, error: "로그인이 필요합니다." };
-
-  const cohort = await getCohortById(student.cohortId);
+  const cohort = await getCohortById(String(formData.get("cohortId") ?? ""));
   if (!cohort) return { ok: false, error: "섹션 정보를 찾을 수 없습니다." };
+  const student = await getStudent(cohort.id);
+  if (!student) return { ok: false, error: "이 섹션에 가입·수락된 교육생만 등록할 수 있습니다." };
   if (!cohort.scoringOpen || cohort.rankRevealed) {
     return { ok: false, error: "채점이 마감되어 작품 등록·수정이 잠겼습니다." };
   }
@@ -98,7 +97,7 @@ export async function submitProjectAction(
     await saveSubmission({
       cohortId: student.cohortId,
       authorId: student.id,
-      authorName: student.name,
+      authorName: student.name, // 닉네임 (공개 표시)
       submission: sub,
       thumb,
     });

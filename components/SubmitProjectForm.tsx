@@ -33,10 +33,12 @@ const inputCls =
   "w-full rounded-lg border border-white/15 bg-coal-soft px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-gold focus:ring-2 focus:ring-gold/20";
 
 export default function SubmitProjectForm({
+  cohortId,
   initial,
   initialThumbUrl,
   locked,
 }: {
+  cohortId: string;
   initial: Submission | null;
   initialThumbUrl: string | null;
   locked: boolean;
@@ -46,12 +48,14 @@ export default function SubmitProjectForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
+      <input type="hidden" name="cohortId" value={cohortId} />
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-semibold text-white">
           썸네일 (대표 이미지)<span className="ml-1 text-gold">*</span>
         </span>
         <ThumbnailUploader
           currentUrl={initialThumbUrl}
+          cohortId={cohortId}
           disabled={locked}
           onUploaded={(path) => setThumbPath(path)}
         />

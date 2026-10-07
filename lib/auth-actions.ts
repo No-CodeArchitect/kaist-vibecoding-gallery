@@ -1,39 +1,61 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { validateStudent } from "./students-store";
-import { createSession, destroySession } from "./session";
+import { revalidatePath } from "next/cache";
+import { destroyMemberSession, getMember } from "./member-session";
+import { getCohortById } from "./cohorts-store";
+import { requestMembership } from "./memberships-store";
+import { safeNext } from "./google-oauth";
 
-export interface LoginState {
+export interface JoinState {
+  ok: boolean;
   error: string | null;
+  values?: { realName: string; nickname: string };
 }
 
-// 섹션(기수) 로그인. 폼에 cohortId + slug(리다이렉트용)가 함께 온다.
-export async function login(
-  _prevState: LoginState,
-  formData: FormData
-): Promise<LoginState> {
+const NICK_RE = /^[0-9A-Za-z가-힣_.\- ]+$/;
+
+// 섹션 가입 신청 (구글 로그인 후). 관리자가 수락하면 채점·댓글·작품 등록이 가능해진다.
+export async function joinSectionAction(_prev: JoinState, formData: FormData): Promise<JoinState> {
+  const member = await getMember();
+  if (!member) return { ok: false, error: "먼저 구글 계정으로 로그인해 주세요." };
+
   const cohortId = String(formData.get("cohortId") ?? "");
-  const slug = String(formData.get("slug") ?? "");
-  const studentId = String(formData.get("studentId") ?? "");
-  const code = String(formData.get("code") ?? "");
-  const next = String(formData.get("next") ?? "");
+  const realName = String(formData.get("realName") ?? "").trim();
+  const nickname = String(formData.get("nickname") ?? "").trim().replace(/\s+/g, " ");
+  const values = { realName, nickname };
 
-  if (!cohortId) return { error: "섹션 정보가 없습니다." };
-  if (!studentId) return { error: "이름을 선택해 주세요." };
-
-  const student = await validateStudent(cohortId, studentId, code);
-  if (!student) {
-    return { error: "이름 또는 개인 코드가 올바르지 않습니다." };
+  const cohort = await getCohortById(cohortId);
+  if (!cohort) return { ok: false, error: "섹션을 찾을 수 없습니다.", values };
+  if (realName.length < 2 || realName.length > 20) {
+    return { ok: false, error: "실명을 2~20자로 입력해 주세요.", values };
+  }
+  if (nickname.length < 2 || nickname.length > 12 || !NICK_RE.test(nickname)) {
+    return { ok: false, error: "닉네임은 2~12자, 한글·영문·숫자와 _ . - 만 쓸 수 있습니다.", values };
   }
 
-  await createSession(student.id);
-  // next는 정해진 값만 허용 (임의 주소로의 리다이렉트 방지)
-  if (slug && next === "submit") redirect(`/g/${slug}/submit`);
-  redirect(slug ? `/g/${slug}` : "/");
+  try {
+    const res = await requestMembership({
+      cohortId,
+      googleSub: member.sub,
+      email: member.email,
+      googleName: member.name,
+      realName,
+      nickname,
+    });
+    if (!res.ok) return { ok: false, error: res.error, values };
+  } catch (err) {
+    console.error("[join]", (err as Error).message);
+    return { ok: false, error: "일시적인 오류로 신청하지 못했습니다. 잠시 후 다시 시도해 주세요.", values };
+  }
+
+  revalidatePath(`/g/${cohort.slug}/join`);
+  revalidatePath("/admin");
+  return { ok: true, error: null, values };
 }
 
-export async function logout(): Promise<void> {
-  await destroySession();
-  redirect("/");
+// 로그아웃 (구글 계정 세션 종료). next로 돌아갈 곳을 지정할 수 있다.
+export async function logout(formData?: FormData): Promise<void> {
+  await destroyMemberSession();
+  redirect(safeNext(formData ? String(formData.get("next") ?? "") : "", "/"));
 }

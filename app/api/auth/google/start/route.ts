@@ -3,32 +3,33 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import {
   OAUTH_COOKIE,
-  encodeOAuthCookie,
   buildAuthUrl,
+  encodeOAuthCookie,
   originOf,
+  safeNext,
   ssoEnabled,
 } from "@/lib/google-oauth";
 
 export const dynamic = "force-dynamic";
 
-// 구글 로그인 시작: state/nonce를 만들어 짧게 쿠키에 두고 구글로 보낸다.
+// 교육생 구글 로그인 시작. ?next=/g/<slug>/join 처럼 돌아갈 경로를 받는다.
+// 콜백은 관리자와 같은 /api/admin/google/callback 을 쓰고, 쿠키의 purpose로 구분한다.
 export async function GET(req: Request) {
   const origin = originOf(req);
+  const next = safeNext(new URL(req.url).searchParams.get("next"));
   if (!ssoEnabled()) {
-    return NextResponse.redirect(`${origin}/admin/login?error=sso_off`);
+    return NextResponse.redirect(`${origin}/me?error=sso_off`);
   }
 
   const state = crypto.randomBytes(16).toString("hex");
   const nonce = crypto.randomBytes(16).toString("hex");
-
   const c = await cookies();
-  c.set(OAUTH_COOKIE, encodeOAuthCookie({ state, nonce, purpose: "admin" }), {
+  c.set(OAUTH_COOKIE, encodeOAuthCookie({ state, nonce, purpose: "member", next }), {
     httpOnly: true,
-    sameSite: "lax", // 구글에서 돌아오는 최상위 GET 이동에는 쿠키가 실린다
+    sameSite: "lax",
     path: "/",
     maxAge: 60 * 10,
     secure: origin.startsWith("https://"),
   });
-
   return NextResponse.redirect(buildAuthUrl(origin, state, nonce));
 }

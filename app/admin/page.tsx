@@ -11,12 +11,13 @@ import {
   createCohortAction,
   toggleScoringOpen,
   toggleRankRevealed,
-  addStudentsAction,
-  removeStudentAction,
+  setMemberStatusAction,
+  approveAllAction,
+  deleteMemberAction,
   moderateComment,
 } from "@/lib/admin-actions";
 import { listCohorts } from "@/lib/cohorts-store";
-import { listStudents } from "@/lib/students-store";
+import { listMemberships } from "@/lib/memberships-store";
 import { getProjects, listRecords } from "@/lib/projects-data";
 import { hasApiKey } from "@/lib/pipeline/ai";
 import SubmissionsPanel, { type SubmissionRow } from "@/components/SubmissionsPanel";
@@ -53,15 +54,22 @@ export default async function AdminDashboard() {
   const cohorts = await listCohorts();
   const sections = await Promise.all(
     cohorts.map(async (c) => {
-      const students = await listStudents(c.id);
+      const memberships = await listMemberships(c.id);
+      const students = memberships.filter((m) => m.status === "approved");
+      const pendingMembers = memberships.filter((m) => m.status === "pending");
+      const rejectedMembers = memberships.filter((m) => m.status === "rejected");
+      // 관리자 화면에서는 닉네임 옆에 실명을 함께 보여 준다
+      const realNameOf = new Map(memberships.map((m) => [m.id, m.realName]));
+      const who = (id: string, nick: string) =>
+        realNameOf.has(id) ? `${nick} (${realNameOf.get(id)})` : nick;
       const projects = await getProjects(c.id);
       const records = await listRecords(c.id);
       const submitted = new Set(records.map((r) => r.authorId));
-      const missing = students.filter((s) => !submitted.has(s.id)).map((s) => s.name);
+      const missing = students.filter((s) => !submitted.has(s.id)).map((s) => who(s.id, s.nickname));
       const rows: SubmissionRow[] = records.map((r) => ({
         id: r.id,
         title: r.submission.title,
-        authorName: r.authorName,
+        authorName: who(r.authorId, r.authorName),
         liveUrl: r.submission.liveUrl,
         status: r.status,
         needsAnalysis: r.needsAnalysis,
@@ -72,12 +80,12 @@ export default async function AdminDashboard() {
         updatedAt: r.updatedAt,
       }));
       const pids = new Set(projects.map((p) => p.id));
-      const ranked = (await rankProjects(projects)).sort(
-        (a, b) => (a.rank ?? 99) - (b.rank ?? 99)
-      );
+      const ranked = (await rankProjects(projects))
+        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
+        .map((p) => ({ ...p, authorName: who(p.authorId, p.authorName) }));
       const raters = await distinctRaterCountFor(pids);
       const comments = await listAllComments(pids);
-      return { c, students, projects, ranked, raters, comments, rows, missing };
+      return { c, students, pendingMembers, rejectedMembers, projects, ranked, raters, comments, rows, missing };
     })
   );
 
@@ -286,7 +294,7 @@ export default async function AdminDashboard() {
         </section>
 
         {/* 섹션별 관리 */}
-        {sections.map(({ c, students, projects, ranked, raters, comments, rows, missing }) => (
+        {sections.map(({ c, students, pendingMembers, rejectedMembers, projects, ranked, raters, comments, rows, missing }) => (
           <section key={c.id} className="rounded-2xl bg-coal p-5 ring-1 ring-white/10">
             {/* 헤더 + 링크 */}
             <div className="flex flex-wrap items-center gap-2">
@@ -365,42 +373,93 @@ export default async function AdminDashboard() {
               <Stat label="프로젝트" value={`${projects.length}개`} />
             </div>
 
-            {/* 명단/코드 관리 */}
+            {/* 가입 신청 · 교육생 */}
             <div className="mt-5">
-              <h3 className="mb-2 text-sm font-bold text-white">명단 · 코드</h3>
-              <form action={addStudentsAction} className="flex flex-col gap-2">
-                <input type="hidden" name="cohortId" value={c.id} />
-                <textarea
-                  name="names"
-                  rows={2}
-                  placeholder="이름을 줄바꿈 또는 쉼표로 여러 명 입력 (예: 홍길동, 김철수)"
-                  className="w-full resize-none rounded-lg border border-white/15 bg-coal-soft px-3 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-gold focus:ring-2 focus:ring-gold/20"
-                />
-                <button className="self-start rounded-lg bg-gold px-4 py-2 text-sm font-bold text-night transition hover:bg-gold-soft">
-                  추가하고 코드 생성
-                </button>
-              </form>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-white">가입 신청 · 교육생</h3>
+                {pendingMembers.length > 0 && (
+                  <span className="rounded-full bg-gold px-2 py-0.5 text-xs font-black text-night">
+                    대기 {pendingMembers.length}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-white/50">
+                교육생은 배부 링크에서 구글 계정으로 로그인해 실명·닉네임으로 가입을 신청합니다.
+                실명을 명단과 대조해 수락하세요. 사이트에는 닉네임만 표시됩니다.
+              </p>
 
-              {students.length > 0 && (
+              {pendingMembers.length > 0 && (
+                <div className="mt-3 rounded-xl border border-gold/40 bg-gold/5 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-gold">수락 대기</span>
+                    <form action={approveAllAction}>
+                      <input type="hidden" name="cohortId" value={c.id} />
+                      <button className="rounded-lg bg-gold px-3 py-1.5 text-xs font-bold text-night hover:bg-gold-soft">
+                        대기 {pendingMembers.length}명 전체 수락
+                      </button>
+                    </form>
+                  </div>
+                  <ul className="divide-y divide-white/10">
+                    {pendingMembers.map((m) => (
+                      <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
+                        <span className="font-bold text-white">{m.realName}</span>
+                        <span className="text-white/60">닉네임 {m.nickname}</span>
+                        <span className="text-xs text-white/40">{m.email}</span>
+                        <span className="ml-auto flex gap-1">
+                          <MemberButton id={m.id} status="approved" label="수락" primary />
+                          <MemberButton id={m.id} status="rejected" label="거절" />
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {students.length > 0 ? (
                 <ul className="mt-3 divide-y divide-white/10 rounded-lg ring-1 ring-white/10">
-                  {students.map((s) => (
-                    <li
-                      key={s.id}
-                      className="flex items-center gap-3 px-3 py-2 text-sm"
-                    >
-                      <span className="flex-1 text-white">{s.name}</span>
-                      <span className="rounded bg-night px-2 py-0.5 font-mono text-gold ring-1 ring-white/10">
-                        {s.accessCode}
+                  {students.map((m) => (
+                    <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
+                      <span className="font-semibold text-white">{m.nickname}</span>
+                      <span className="text-white/60">{m.realName}</span>
+                      <span className="text-xs text-white/40">{m.email}</span>
+                      <span className="ml-auto">
+                        <MemberButton id={m.id} status="rejected" label="수락 취소" />
                       </span>
-                      <form action={removeStudentAction}>
-                        <input type="hidden" name="id" value={s.id} />
-                        <button className="rounded px-2 py-0.5 text-xs text-white/40 hover:text-red-400">
-                          삭제
-                        </button>
-                      </form>
                     </li>
                   ))}
                 </ul>
+              ) : (
+                pendingMembers.length === 0 && (
+                  <p className="mt-3 rounded-lg px-3 py-3 text-xs text-white/40 ring-1 ring-white/10">
+                    아직 가입한 교육생이 없습니다. 위의 배부 링크를 교육생에게 나눠 주세요.
+                  </p>
+                )
+              )}
+
+              {rejectedMembers.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs text-white/40 hover:text-gold">
+                    거절·취소된 신청 {rejectedMembers.length}건
+                  </summary>
+                  <ul className="mt-2 divide-y divide-white/10 rounded-lg ring-1 ring-white/10">
+                    {rejectedMembers.map((m) => (
+                      <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
+                        <span className="text-white/70">{m.realName}</span>
+                        <span className="text-white/40">닉네임 {m.nickname}</span>
+                        <span className="text-xs text-white/30">{m.email}</span>
+                        <span className="ml-auto flex gap-1">
+                          <MemberButton id={m.id} status="approved" label="수락" />
+                          <form action={deleteMemberAction}>
+                            <input type="hidden" name="id" value={m.id} />
+                            <button className="rounded px-2 py-0.5 text-xs text-white/40 hover:text-red-400">
+                              기록 삭제
+                            </button>
+                          </form>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               )}
             </div>
 
@@ -503,6 +562,34 @@ const EDU_STATUS: Record<EduRequestStatus, { label: string; tone: string }> = {
   contacted: { label: "연락함", tone: "bg-sky-500/20 text-sky-300" },
   done: { label: "완료", tone: "bg-white/10 text-white/60" },
 };
+
+function MemberButton({
+  id,
+  status,
+  label,
+  primary,
+}: {
+  id: string;
+  status: "approved" | "rejected";
+  label: string;
+  primary?: boolean;
+}) {
+  return (
+    <form action={setMemberStatusAction}>
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="status" value={status} />
+      <button
+        className={`rounded px-2 py-0.5 text-xs font-semibold ${
+          primary
+            ? "bg-gold text-night hover:bg-gold-soft"
+            : "bg-white/10 text-white/70 hover:bg-white/20"
+        }`}
+      >
+        {label}
+      </button>
+    </form>
+  );
+}
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

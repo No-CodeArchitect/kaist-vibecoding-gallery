@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSession } from "./session";
+import { getStudent } from "./session";
 import { setScore } from "./scores-store";
 import { getCohortById } from "./cohorts-store";
 import { getProjectById } from "./projects-data";
@@ -21,20 +21,16 @@ export async function submitScore(
   _prevState: ScoreState,
   formData: FormData
 ): Promise<ScoreState> {
-  const student = await getSession();
-  if (!student) {
-    return { ok: false, error: "로그인이 필요합니다." };
-  }
-
   const projectId = String(formData.get("projectId") ?? "");
   const project = await getProjectById(projectId);
   if (!project) {
     return { ok: false, error: "프로젝트를 찾을 수 없습니다." };
   }
 
-  // 다른 섹션 프로젝트는 채점 불가 (섹션 간 분리)
-  if (project.cohortId !== student.cohortId) {
-    return { ok: false, error: "이 섹션의 교육생만 채점할 수 있습니다." };
+  // 이 섹션에서 수락된 교육생만 채점 (섹션 간 분리)
+  const student = await getStudent(project.cohortId);
+  if (!student) {
+    return { ok: false, error: "이 섹션에 가입·수락된 교육생만 채점할 수 있습니다." };
   }
 
   const cohort = await getCohortById(student.cohortId);

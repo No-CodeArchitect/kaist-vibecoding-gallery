@@ -5,6 +5,7 @@
 
 export interface GoogleClaims {
   iss?: string;
+  sub?: string; // 구글 계정 고유 ID (이메일이 바뀌어도 그대로)
   aud?: string;
   exp?: number;
   nonce?: string;
@@ -14,7 +15,7 @@ export interface GoogleClaims {
 }
 
 export type ClaimsResult =
-  | { ok: true; email: string; name: string }
+  | { ok: true; sub: string; email: string; name: string }
   | { ok: false; reason: string };
 
 export function decodeJwtPayload(idToken: string): GoogleClaims | null {
@@ -45,10 +46,16 @@ export function validateClaims(
   if (!claims.nonce || claims.nonce !== opts.nonce) {
     return { ok: false, reason: "nonce 불일치" };
   }
+  if (!claims.sub) return { ok: false, reason: "계정 ID 없음" };
   if (!claims.email) return { ok: false, reason: "이메일 없음" };
   // 구글은 boolean true 또는 문자열 "true"로 줄 수 있다.
   if (claims.email_verified !== true && claims.email_verified !== "true") {
     return { ok: false, reason: "이메일 미인증 계정" };
   }
-  return { ok: true, email: claims.email.trim().toLowerCase(), name: claims.name ?? "" };
+  return {
+    ok: true,
+    sub: claims.sub,
+    email: claims.email.trim().toLowerCase(),
+    name: claims.name ?? "",
+  };
 }

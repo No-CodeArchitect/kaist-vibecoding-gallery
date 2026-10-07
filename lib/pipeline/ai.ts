@@ -2,7 +2,20 @@
 // 요약·특징·AI채점을 한 번의 호출로 생성하고, 댓글 닉네임도 여기서 생성한다.
 
 import Anthropic from "@anthropic-ai/sdk";
-import type { ProjectInput } from "./sheet";
+// AI 분석 입력 (교육생 작품 등록 내용)
+export interface ProjectInput {
+  authorId: string;
+  authorName: string;
+  title: string;
+  tagline: string;
+  liveUrl: string;
+  repoUrl: string;
+  problem: string;
+  features: string; // 원본(줄바꿈/쉼표 구분 문자열)
+  techStack: string;
+  militaryUseCase: string;
+  notes: string;
+}
 import { generateNickname as mockNickname } from "../nickname";
 
 const MODEL = "claude-opus-4-8";

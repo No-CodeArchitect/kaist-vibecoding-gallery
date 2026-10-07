@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import ProjectCard from "@/components/ProjectCard";
 import { getProjects, getRecordByAuthor } from "@/lib/projects-data";
 import EduBanner from "@/components/site/EduBanner";
-import { getSession } from "@/lib/session";
+import { getStudent } from "@/lib/session";
+import { getMember } from "@/lib/member-session";
+import { getMembership } from "@/lib/memberships-store";
 import { logout } from "@/lib/auth-actions";
 import { scoredProjectIds } from "@/lib/scores-store";
 import { getCohortBySlug } from "@/lib/cohorts-store";
@@ -20,9 +22,11 @@ export default async function SectionGalleryPage({
   const cohort = await getCohortBySlug(slug);
   if (!cohort) notFound();
 
-  const session = await getSession();
-  // 이 섹션 소속 학생만 "로그인 상태"로 인정 (섹션 간 분리)
-  const student = session && session.cohortId === cohort.id ? session : null;
+  // 이 섹션에서 수락된 교육생만 "로그인 상태"로 인정 (섹션 간 분리)
+  const student = await getStudent(cohort.id);
+  const member = student ? null : await getMember();
+  const pendingJoin =
+    member && (await getMembership(cohort.id, member.sub))?.status === "pending";
 
   const scoredIds = student
     ? await scoredProjectIds(student.id)
@@ -118,6 +122,7 @@ export default async function SectionGalleryPage({
                     {myRecord ? "내 작품" : "작품 등록"}
                   </Link>
                   <form action={logout}>
+                    <input type="hidden" name="next" value={`/g/${slug}`} />
                     <button className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/70 transition hover:bg-white/10">
                       로그아웃
                     </button>
@@ -125,10 +130,10 @@ export default async function SectionGalleryPage({
                 </>
               ) : (
                 <Link
-                  href={`/g/${slug}/login`}
+                  href={`/g/${slug}/join`}
                   className="rounded-full border border-gold/60 px-4 py-1.5 text-xs font-bold text-gold transition hover:bg-gold hover:text-night"
                 >
-                  로그인하고 채점하기
+                  {pendingJoin ? "가입 수락 대기 중" : member ? "이 섹션 가입 신청" : "로그인하고 참여하기"}
                 </Link>
               )}
             </div>

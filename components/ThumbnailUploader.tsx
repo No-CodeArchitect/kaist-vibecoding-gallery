@@ -51,12 +51,14 @@ function put(url: string, blob: Blob, onProgress: (pct: number) => void): Promis
 export default function ThumbnailUploader({
   currentUrl,
   recordId,
+  cohortId,
   disabled,
   compact,
   onUploaded,
 }: {
   currentUrl: string | null;
   recordId?: string; // 관리자가 다른 작품 썸네일을 바꿀 때
+  cohortId?: string; // 교육생: 본인 작품이 속한 섹션
   disabled?: boolean;
   compact?: boolean;
   onUploaded: (path: string, url: string) => void | Promise<void>;
@@ -78,7 +80,7 @@ export default function ThumbnailUploader({
       const res = await fetch("/api/thumb/sign", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ext: extOf(blob.type), size: blob.size, recordId }),
+        body: JSON.stringify({ ext: extOf(blob.type), size: blob.size, recordId, cohortId }),
       });
       const sign = await res.json();
       if (!res.ok) throw new Error(sign.error || `HTTP ${res.status}`);

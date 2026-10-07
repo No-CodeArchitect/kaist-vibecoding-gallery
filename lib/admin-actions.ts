@@ -15,7 +15,12 @@ import {
   setCohortScoringOpen,
   setCohortRankRevealed,
 } from "./cohorts-store";
-import { addStudents, removeStudent } from "./students-store";
+import {
+  approveAllPending,
+  deleteMembership,
+  setMembershipStatus,
+  type MembershipStatus,
+} from "./memberships-store";
 import { setCommentHidden } from "./comments-store";
 
 export interface AdminLoginState {
@@ -72,21 +77,28 @@ export async function toggleRankRevealed(formData: FormData): Promise<void> {
   refresh();
 }
 
-// --- 명단/코드 ---
-export async function addStudentsAction(formData: FormData): Promise<void> {
+// --- 섹션 가입(교육생) 수락 ---
+export async function setMemberStatusAction(formData: FormData): Promise<void> {
   await requireAdmin();
-  const cohortId = String(formData.get("cohortId") ?? "");
-  const raw = String(formData.get("names") ?? "");
-  // 줄바꿈/쉼표로 여러 명 한 번에
-  const names = raw.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
-  if (cohortId && names.length) await addStudents(cohortId, names);
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "") as MembershipStatus;
+  if (!id || !["pending", "approved", "rejected"].includes(status)) return;
+  await setMembershipStatus(id, status);
   refresh();
 }
 
-export async function removeStudentAction(formData: FormData): Promise<void> {
+export async function approveAllAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const cohortId = String(formData.get("cohortId") ?? "");
+  if (cohortId) await approveAllPending(cohortId);
+  refresh();
+}
+
+// 거절된 신청 기록 삭제 (그 사람이 다시 신청할 수 있게 됨)
+export async function deleteMemberAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (id) await removeStudent(id);
+  if (id) await deleteMembership(id);
   refresh();
 }
 

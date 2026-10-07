@@ -5,7 +5,37 @@
 import "server-only";
 import { decodeJwtPayload, validateClaims, type ClaimsResult } from "./google-claims";
 
-export const OAUTH_COOKIE = "vg_oauth"; // state.nonce 를 잠깐 보관하는 쿠키
+export const OAUTH_COOKIE = "vg_oauth"; // state·nonce·용도를 잠깐 보관하는 쿠키
+
+// 관리자 로그인과 교육생 로그인이 같은 콜백 주소(/api/admin/google/callback)를 함께 쓴다.
+// (구글 콘솔에 등록한 리디렉션 URI를 늘리지 않기 위해) 어느 쪽인지는 쿠키의 purpose로 구분한다.
+export interface OAuthPending {
+  state: string;
+  nonce: string;
+  purpose: "admin" | "member";
+  next?: string; // member: 로그인 후 돌아갈 사이트 내 경로
+}
+
+export function encodeOAuthCookie(p: OAuthPending): string {
+  return Buffer.from(JSON.stringify(p)).toString("base64url");
+}
+
+export function decodeOAuthCookie(raw: string | undefined): OAuthPending | null {
+  if (!raw) return null;
+  try {
+    const p = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
+    if (typeof p?.state !== "string" || typeof p?.nonce !== "string") return null;
+    return { state: p.state, nonce: p.nonce, purpose: p.purpose === "member" ? "member" : "admin", next: p.next };
+  } catch {
+    return null;
+  }
+}
+
+// 사이트 안 경로만 허용 (외부 주소로 튕겨 나가는 오픈 리디렉트 방지).
+export function safeNext(next: string | null | undefined, fallback = "/me"): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return fallback;
+  return next;
+}
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 // 테스트에서 가짜 토큰 서버로 바꿀 수 있게 열어둔 값. 운영에서는 설정하지 않는다.
