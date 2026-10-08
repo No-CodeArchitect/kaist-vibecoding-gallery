@@ -31,6 +31,9 @@ export default function SiteFooter() {
           <Link href="/apply" className="hover:text-gold">
             교육 신청
           </Link>
+          <Link href="/privacy" className="hover:text-gold">
+            개인정보 처리방침
+          </Link>
           <Link href="/admin" className="hover:text-gold">
             관리자
           </Link>
