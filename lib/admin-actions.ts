@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { adminHref } from "./admin-nav";
 import {
   checkAdminPassword,
   createAdminSession,
@@ -60,8 +61,9 @@ export async function createCohortAction(formData: FormData): Promise<void> {
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
   if (!name) return;
-  await createCohort(name, slug || undefined);
+  const cohort = await createCohort(name, slug || undefined);
   refresh();
+  redirect(adminHref("section", cohort.id)); // 만든 섹션 화면으로 바로 이동
 }
 
 export async function toggleScoringOpen(formData: FormData): Promise<void> {
